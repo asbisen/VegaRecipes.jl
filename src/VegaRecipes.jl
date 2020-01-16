@@ -1,0 +1,6 @@
+module VegaRecipes
+
+
+
+
+end # module

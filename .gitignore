@@ -1,0 +1,11 @@
+*.jl.cov
+*.jl.*.cov
+*.jl.mem
+.DS_Store
+.ipynb_checkpoints
+docs/build
+docs/site
+deps/usr
+deps/deps.jl
+deps/build.log
+Manifest.toml
