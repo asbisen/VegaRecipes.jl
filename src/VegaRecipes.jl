@@ -8,6 +8,7 @@ using LinearAlgebra
 export corrplot
 
 
+include("utils.jl")
 include("plots/corrplot.jl")
 
 
