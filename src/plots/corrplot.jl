@@ -36,17 +36,41 @@ function corrplot(z::Matrix, colnames::Vector;
                   height = 400, width = 400,
                   title = "Correlation Plot",
                   xlabel = "", ylabel = "",
-                  color_scheme = "greenblue", color_reverse=false)
+                  color_scheme = "greenblue", color_reverse=false,
+                  nan_inf_color = :red)
 
   # Check if matrix is square
   is_squarematrix(z) || @error "Input must be a square matrix"
 
+  # convert Matrix of numbers to "Any" such that
+  # `Inf` and `NaN` can be changed to string equivalent
+  # else vega would just show "null" for those cells
+  dat = convert(Array{Any}, z)
+
+  # find all the cells with Inf and NaN in them and
+  nanidx = Tuple.(findall(isnan, dat))
+  infidx = Tuple.(findall(isinf, dat))
+
+
+
   # masking upper right triangle of square matrix
   if maskupper == true
-    dat = LowerTriangular(z)
-  else
-    dat = deepcopy(z)
+    for i in 1:size(dat)[1]-1
+      for j in i+1:size(dat)[2]
+        dat[i,j] = "masked"
+      end
+    end
   end
+
+  # convert NaN and Inf to equivalent string representation
+  for (r,c) in nanidx
+    dat[r,c]="NaN"
+  end
+
+  for (r,c) in infidx
+    dat[r,c]="Inf"
+  end
+
 
   # Create a DataFrame, add a new column and stack to long form
   df = DataFrame(dat, Symbol.(colnames))
@@ -65,41 +89,22 @@ function corrplot(z::Matrix, colnames::Vector;
         ) +
         @vlplot(
           :rect,
-          color = {condition = {test = "datum['value'] == 0", value = :white}, "value:q", 
-                   title="",
-                   scale = { scheme = color_scheme, reverse = color_reverse },
+          color = { "value:q",
+                    title="",
+                    scale = { scheme = color_scheme, reverse = color_reverse }
+                   }
+         ) +
+        @vlplot(
+          :text,
+          text = "value:n",
+          color = {condition = [
+                          {test = "datum['value'] < 0.5", value = :black},
+                          {test = "datum['value'] == 'Inf'", value = nan_inf_color},
+                          {test = "datum['value'] == 'NaN'", value = nan_inf_color},
+                         ],
+                   value = :white
                   }
-        )
-
-  if maskupper == true
-    plt = plt + 
-          @vlplot(
-            :rect,
-            color = {condition = {test = "datum['value'] == 0", value = :white}, "value:q",
-                     title="",
-                     scale = { scheme = color_scheme, reverse = color_reverse },
-                    }
-           ) +
-          @vlplot(
-            :text,
-            text = {condition = {test = "datum['value'] == 0", value = ""}, "value:n"},
-            color = {condition = {test = "datum['value'] < 0.5", value = :black}, value = :white}
-          )
-  else
-    plt = plt + 
-          @vlplot(
-            :rect,
-            color = {"value:q",
-                     title="",
-                     scale = { scheme = color_scheme, reverse = color_reverse },
-                    }
-           ) +
-          @vlplot(
-            :text,
-            text = "value:n",
-            color = {condition = {test = "datum['value'] < 0.5", value = :black}, value = :white}
-          )
-  end
+         )
 
   return plt
 
